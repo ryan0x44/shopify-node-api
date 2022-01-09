@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import jwt from 'jsrsasign';
 
 import {Context} from '../context';
 import * as ShopifyErrors from '../error';
@@ -23,9 +23,16 @@ interface JwtPayload {
  * @param token Received session token
  */
 function decodeSessionToken(token: string): JwtPayload {
-  let payload: JwtPayload;
+  let payload: object;
   try {
-    payload = jwt.verify(token, Context.API_SECRET_KEY, {algorithms: ['HS256']}) as JwtPayload;
+    if (jwt.KJUR.jws.JWS.verifyJWT(token, Context.API_SECRET_KEY, { alg: ['HS256']}) === false) {
+      throw new Error("unable to verify against API secret key")
+    };
+    const parsed = jwt.KJUR.jws.JWS.parse(token)
+    if (parsed.payloadObj == null) {
+      throw new  Error("unable to parse JWT payload")
+    }
+    payload = parsed.payloadObj
   } catch (error) {
     throw new ShopifyErrors.InvalidJwtError(`Failed to parse session token '${token}': ${error.message}`);
   }
